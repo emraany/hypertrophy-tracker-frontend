@@ -53,7 +53,7 @@ export default function Register({ onRegistered, onGoLogin }: Props) {
         `${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/auth/register`,
         {
           name,
-          username,
+          username: username.toLowerCase(),
           password,
           securityQuestions: [
             { question: question1, answer: answer1 },

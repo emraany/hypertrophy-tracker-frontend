@@ -43,7 +43,7 @@ export default function Reset() {
       try {
         const res = await fetch(
           `${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/auth/security-questions?username=${encodeURIComponent(
-            username
+            username.toLowerCase(),
           )}`
         );
         if (!res.ok) throw new Error("User not found");
@@ -58,7 +58,7 @@ export default function Reset() {
     } else if (step === "security") {
       try {
         const payload = {
-          username,
+          username: username.toLowerCase(),
           securityAnswers: securityQuestions.map((q, i) => ({
             question: q,
             answer: answers[i],
@@ -94,7 +94,7 @@ export default function Reset() {
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, newPassword }),
+            body: JSON.stringify({ username: username.toLowerCase(), newPassword }),
           }
         );
         if (!res.ok) throw new Error();

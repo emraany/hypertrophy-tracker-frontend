@@ -31,7 +31,7 @@ export default function Login({ onLogin, onGoRegister }: Props) {
     try {
       const res = await axios.post(
         `${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/auth/login`,
-        { username, password }
+        { username: username.toLowerCase(), password }
       );
 
       if (rememberMe) {
