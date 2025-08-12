@@ -2,7 +2,7 @@
 
 A full-stack fitness tracking application designed for strength athletes, bodybuilders, and anyone looking to monitor their progress. The app allows users to log workouts, track performance over time, and visualize strength gains.
 
-## Live Demo
+## Live Website
 [**https://hypertrophytracker.vercel.app**](https://hypertrophytracker.vercel.app)  
 
 ---
