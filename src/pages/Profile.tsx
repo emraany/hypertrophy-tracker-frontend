@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Layout from "../components/Layout";
+import { authHeaders, getToken } from "../authHeaders";
 
 export default function Profile() {
   const [name, setName] = useState("");
@@ -18,18 +19,18 @@ export default function Profile() {
   }, [feedback]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = getToken();
     if (!token) return;
 
     const fetchProfile = async () => {
       try {
         const res = await axios.get(
           `${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/auth/me`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: authHeaders() }
         );
         setName(res.data.name || "");
         setUsername(res.data.username || "");
-      } catch (err) {
+      } catch {
         setFeedback({ text: "Error fetching profile", type: "error" });
       }
     };
@@ -39,7 +40,7 @@ export default function Profile() {
     axios
       .get(
         `${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/custom-exercises`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: authHeaders() }
       )
       .then((res) => {
         const data = res.data;
@@ -56,28 +57,36 @@ export default function Profile() {
   }, []);
 
   const handleChangePassword = async () => {
-    const token = localStorage.getItem("token");
+    const token = getToken();
+    if (!token) {
+      setFeedback({ text: "You must be logged in.", type: "error" });
+      return;
+    }
     try {
       await axios.put(
         `${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/auth/change-password`,
         { oldPassword, newPassword: password },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: authHeaders() }
       );
       setFeedback({ text: "Password changed successfully", type: "success" });
       setPassword("");
       setOldPassword("");
       setShowChangePassword(false);
-    } catch (err) {
+    } catch {
       setFeedback({ text: "Error changing password", type: "error" });
     }
   };
 
   const deleteCustomExercise = async (muscleGroup: string, exerciseName: string) => {
-    const token = localStorage.getItem("token");
+    const token = getToken();
+    if (!token) {
+      setFeedback({ text: "You must be logged in.", type: "error" });
+      return;
+    }
     try {
       await axios.delete(
         `${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/custom-exercises`,
-        { headers: { Authorization: `Bearer ${token}` }, data: { muscleGroup, exerciseName } }
+        { headers: authHeaders(), data: { muscleGroup, exerciseName } }
       );
       setCustomExercises((prev) => {
         const updated = { ...prev };
@@ -86,7 +95,7 @@ export default function Profile() {
         return updated;
       });
       setFeedback({ text: `Deleted "${exerciseName}" from ${muscleGroup}`, type: "success" });
-    } catch (err) {
+    } catch {
       setFeedback({ text: "Failed to delete exercise", type: "error" });
     }
   };
@@ -96,7 +105,6 @@ export default function Profile() {
       <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow space-y-6">
         <h2 className="text-2xl font-bold text-center text-gray-800">Profile</h2>
 
-        {/* inline feedback */}
         {feedback && (
           <p
             role="alert"
@@ -176,11 +184,7 @@ export default function Profile() {
                     <span className="text-sm">{ex}</span>
                     <button
                       onClick={() => {
-                        if (
-                          window.confirm(
-                            `Delete "${ex}" from ${muscleGroup}?`
-                          )
-                        ) {
+                        if (window.confirm(`Delete "${ex}" from ${muscleGroup}?`)) {
                           deleteCustomExercise(muscleGroup, ex);
                         }
                       }}
