@@ -1,6 +1,7 @@
 import Layout from "../components/Layout";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { authHeaders, getToken } from "../authHeaders";
 
 type Session = {
   _id: string;
@@ -18,8 +19,7 @@ type SessionListProps = {
 
 const controlClass =
   "w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
-const linkButtonClass =
-  "text-sm underline transition hover:text-blue-800";
+const linkButtonClass = "text-sm underline transition hover:text-blue-800";
 
 export default function SessionList({ onRepeat }: SessionListProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -31,24 +31,25 @@ export default function SessionList({ onRepeat }: SessionListProps) {
   }, []);
 
   const fetchSessions = () => {
-    const token = localStorage.getItem("token");
+    const token = getToken();
+    if (!token) return;
     axios
       .get(`${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/sessions`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: authHeaders(),
       })
       .then((res) => setSessions(res.data))
+      .catch(() => {});
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this session?")) return;
     try {
-      const token = localStorage.getItem("token");
       await axios.delete(
         `${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/sessions/${id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: authHeaders() }
       );
       setSessions((prev) => prev.filter((s) => s._id !== id));
-    } catch (err) {
+    } catch {
       alert("Error deleting session");
     }
   };
@@ -74,15 +75,14 @@ export default function SessionList({ onRepeat }: SessionListProps) {
       return;
     }
     try {
-      const token = localStorage.getItem("token");
       await axios.put(
         `${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/sessions/${editing._id}`,
         editing,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: authHeaders() }
       );
       setEditing(null);
       fetchSessions();
-    } catch (err) {
+    } catch {
       setFormError("Error updating session.");
     }
   };
@@ -98,7 +98,7 @@ export default function SessionList({ onRepeat }: SessionListProps) {
     updated.exercises[exIdx].sets[setIdx][field] = value;
     setEditing(updated);
   };
-  
+
   const handleAddSet = (exIdx: number) => {
     if (!editing) return;
     const updated = { ...editing };
@@ -173,10 +173,7 @@ export default function SessionList({ onRepeat }: SessionListProps) {
                   aria-labelledby="edit-session-heading"
                   className="mt-4 bg-white border border-gray-200 shadow-md p-6 rounded-lg space-y-6"
                 >
-                  <h3
-                    id="edit-session-heading"
-                    className="text-lg font-semibold"
-                  >
+                  <h3 id="edit-session-heading" className="text-lg font-semibold">
                     Edit Session
                   </h3>
 
@@ -214,14 +211,8 @@ export default function SessionList({ onRepeat }: SessionListProps) {
                       </h4>
 
                       {ex.sets.map((set, setIdx) => (
-                        <div
-                          key={setIdx}
-                          className="flex items-center gap-4"
-                        >
-                          <label
-                            htmlFor={`reps-${exIdx}-${setIdx}`}
-                            className="sr-only"
-                          >
+                        <div key={setIdx} className="flex items-center gap-4">
+                          <label htmlFor={`reps-${exIdx}-${setIdx}`} className="sr-only">
                             Reps
                           </label>
                           <input
@@ -240,10 +231,7 @@ export default function SessionList({ onRepeat }: SessionListProps) {
                             className={`${controlClass} w-1/2`}
                           />
 
-                          <label
-                            htmlFor={`weight-${exIdx}-${setIdx}`}
-                            className="sr-only"
-                          >
+                          <label htmlFor={`weight-${exIdx}-${setIdx}`} className="sr-only">
                             Weight
                           </label>
                           <input
@@ -265,9 +253,7 @@ export default function SessionList({ onRepeat }: SessionListProps) {
                           {editing.exercises[exIdx].sets.length > 1 && (
                             <button
                               type="button"
-                              onClick={() =>
-                                handleRemoveSet(exIdx, setIdx)
-                              }
+                              onClick={() => handleRemoveSet(exIdx, setIdx)}
                               className="text-red-500 text-xl leading-none"
                             >
                               ❌

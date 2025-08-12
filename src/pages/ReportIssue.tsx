@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Layout from "../components/Layout";
 import axios from "axios";
+import { authHeaders } from "../authHeaders";
 
 export default function ReportIssue() {
   const [message, setMessage] = useState("");
@@ -16,11 +17,12 @@ export default function ReportIssue() {
     try {
       await axios.post(
         `${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/report`,
-        { message }
+        { message },
+        { headers: authHeaders() } // <- harmless if no token; sends Authorization if present
       );
       setStatus("sent");
       setMessage("");
-    } catch (err) {
+    } catch {
       setStatus("error");
     }
   };
@@ -36,14 +38,9 @@ export default function ReportIssue() {
           Found a Bug?
         </h1>
 
-        <p
-          id="report-description"
-          className="text-gray-700 text-sm"
-        >
+        <p id="report-description" className="text-gray-700 text-sm">
           It’s hard to catch every error during development. If you experience
-          an issue, please describe it in detail below and I’ll fix it as soon
-          as possible! Feel free to suggest any features or changes you'd like
-          to see.
+          an issue, please describe it in detail below and I’ll fix it ASAP. You can also suggest features!
         </p>
 
         <textarea

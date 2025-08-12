@@ -1,6 +1,7 @@
 import Layout from "../components/Layout";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { getToken, authHeaders } from "../authHeaders";
 
 function getLocalISODate() {
   const now = new Date();
@@ -27,9 +28,9 @@ type Props = {
 };
 
 const muscleOptions = [
-  "Abdominals", "Abductors", "Adductors", "Biceps", "Calves", "Chest", "Forearms",
-  "Glutes", "Hamstrings", "Lats", "Lower back", "Middle back", "Neck",
-  "Quadriceps", "Shoulders", "Traps", "Triceps", "Other"
+  "Abdominals","Abductors","Adductors","Biceps","Calves","Chest","Forearms",
+  "Glutes","Hamstrings","Lats","Lower back","Middle back","Neck",
+  "Quadriceps","Shoulders","Traps","Triceps","Other"
 ];
 
 const controlClass =
@@ -48,16 +49,13 @@ export default function SessionForm({ sessionToRepeat }: Props) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<"checking" | "online" | "offline">("checking");
 
-  const token = localStorage.getItem("token");
+  const BACKEND = import.meta.env.VITE_REACT_APP_BACKEND_URL;
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/health`)
-      .then(res => {
-        if (res.ok) setApiStatus("online");
-        else throw new Error();
-      })
+    fetch(`${BACKEND}/api/health`)
+      .then(res => res.ok ? setApiStatus("online") : Promise.reject())
       .catch(() => setApiStatus("offline"));
-  }, []);
+  }, [BACKEND]);
 
   useEffect(() => {
     if (!sessionToRepeat) return;
@@ -82,10 +80,7 @@ export default function SessionForm({ sessionToRepeat }: Props) {
                   `https://api.api-ninjas.com/v1/exercises?muscle=${ex.muscleGroup}`,
                   { headers: { "X-Api-Key": import.meta.env.VITE_REACT_APP_API_NINJA_KEY } }
                 ),
-                axios.get(
-                  `${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/custom-exercises`,
-                  { headers: { Authorization: `Bearer ${token}` } }
-                )
+                axios.get(`${BACKEND}/api/custom-exercises`, { headers: authHeaders() })
               ]);
 
               const apiNames    = apiRes.data.map((e: any) => e.name);
@@ -108,7 +103,7 @@ export default function SessionForm({ sessionToRepeat }: Props) {
       );
       setExercises(newExercises);
     })();
-  }, [sessionToRepeat, token]);
+  }, [sessionToRepeat, BACKEND]);
 
   const handleMuscleChange = async (
     index: number,
@@ -129,17 +124,12 @@ export default function SessionForm({ sessionToRepeat }: Props) {
             `https://api.api-ninjas.com/v1/exercises?muscle=${value}`,
             { headers: { "X-Api-Key": import.meta.env.VITE_REACT_APP_API_NINJA_KEY } }
           ),
-          axios.get(
-            `${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/custom-exercises`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          )
+          axios.get(`${BACKEND}/api/custom-exercises`, { headers: authHeaders() })
         ]);
 
         const apiNames    = apiRes.data.map((e: any) => e.name);
         const customNames = (customRes.data[value] || []) as string[];
-        updated[index].exercisesList = Array.from(
-          new Set([...apiNames, ...customNames])
-        );
+        updated[index].exercisesList = Array.from(new Set([...apiNames, ...customNames]));
 
         if (preselectedExercise) {
           updated[index].exercise = preselectedExercise;
@@ -201,6 +191,12 @@ export default function SessionForm({ sessionToRepeat }: Props) {
     setFormError(null);
     setSuccessMessage(null);
 
+    const t = getToken();
+    if (!t) {
+      setFormError("You must be logged in to save a session.");
+      return;
+    }
+
     const isValid = exercises.length > 0 && exercises.every(ex => {
       if (!ex.muscleGroup) return false;
       if (!ex.exercise) return false;
@@ -219,9 +215,9 @@ export default function SessionForm({ sessionToRepeat }: Props) {
       if (ex.exercise === "other" && ex.customExercise && ex.muscleGroup) {
         try {
           await axios.post(
-            `${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/custom-exercises`,
+            `${BACKEND}/api/custom-exercises`,
             { muscleGroup: ex.muscleGroup, exerciseName: ex.customExercise },
-            { headers: { Authorization: `Bearer ${token}` } }
+            { headers: authHeaders() }
           );
         } catch {
         }
@@ -236,11 +232,8 @@ export default function SessionForm({ sessionToRepeat }: Props) {
         sets: ex.sets,
       })),
     };
-    await axios.post(
-      `${import.meta.env.VITE_REACT_APP_BACKEND_URL}/api/sessions`,
-      payload,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+
+    await axios.post(`${BACKEND}/api/sessions`, payload, { headers: authHeaders() });
 
     setSuccessMessage("Session saved!");
     setExercises([{
@@ -323,13 +316,8 @@ export default function SessionForm({ sessionToRepeat }: Props) {
 
         {/* Exercises */}
         {exercises.map((ex, exIdx) => (
-          <div
-            key={exIdx}
-            className="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-4"
-          >
-            <h3 className="text-lg font-semibold text-gray-700">
-              Exercise {exIdx + 1}
-            </h3>
+          <div key={exIdx} className="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-700">Exercise {exIdx + 1}</h3>
 
             <div className="space-y-2">
               <label htmlFor={`muscle-group-${exIdx}`} className="block text-sm font-medium text-gray-700">
@@ -347,9 +335,7 @@ export default function SessionForm({ sessionToRepeat }: Props) {
                 ))}
               </select>
 
-              {ex.loadingExercises && (
-                <p className="text-sm text-gray-500">Loading exercises...</p>
-              )}
+              {ex.loadingExercises && <p className="text-sm text-gray-500">Loading exercises...</p>}
 
               {ex.muscleGroup && (
                 <>
@@ -395,35 +381,25 @@ export default function SessionForm({ sessionToRepeat }: Props) {
 
             {/* Sets */}
             <fieldset className="space-y-2" aria-labelledby={`sets-${exIdx}-legend`}>
-              <legend id={`sets-${exIdx}-legend`} className="font-medium text-gray-700">
-                Sets
-              </legend>
+              <legend id={`sets-${exIdx}-legend`} className="font-medium text-gray-700">Sets</legend>
               {ex.sets.map((s, setIdx) => (
                 <div key={setIdx} className="flex items-center gap-2">
-                  <label htmlFor={`reps-${exIdx}-${setIdx}`} className="sr-only">
-                    Reps
-                  </label>
+                  <label htmlFor={`reps-${exIdx}-${setIdx}`} className="sr-only">Reps</label>
                   <input
                     id={`reps-${exIdx}-${setIdx}`}
                     type="number"
                     placeholder="Reps"
                     value={s.reps || ""}
-                    onChange={(e) =>
-                      handleSetChange(exIdx, setIdx, "reps", parseInt(e.target.value, 10) || 0)
-                    }
+                    onChange={(e) => handleSetChange(exIdx, setIdx, "reps", parseInt(e.target.value, 10) || 0)}
                     className={`${controlClass.split(" focus")[0]} w-1/2`}
                   />
-                  <label htmlFor={`weight-${exIdx}-${setIdx}`} className="sr-only">
-                    Weight
-                  </label>
+                  <label htmlFor={`weight-${exIdx}-${setIdx}`} className="sr-only">Weight</label>
                   <input
                     id={`weight-${exIdx}-${setIdx}`}
                     type="number"
                     placeholder="Weight"
                     value={s.weight || ""}
-                    onChange={(e) =>
-                      handleSetChange(exIdx, setIdx, "weight", parseFloat(e.target.value) || 0)
-                    }
+                    onChange={(e) => handleSetChange(exIdx, setIdx, "weight", parseFloat(e.target.value) || 0)}
                     className={`${controlClass.split(" focus")[0]} w-1/2`}
                   />
                   {ex.sets.length > 1 && (
@@ -437,11 +413,7 @@ export default function SessionForm({ sessionToRepeat }: Props) {
                   )}
                 </div>
               ))}
-              <button
-                type="button"
-                onClick={() => addSet(exIdx)}
-                className="text-blue-600 text-sm font-medium"
-              >
+              <button type="button" onClick={() => addSet(exIdx)} className="text-blue-600 text-sm font-medium">
                 + Add Set
               </button>
             </fieldset>
@@ -458,10 +430,7 @@ export default function SessionForm({ sessionToRepeat }: Props) {
         </button>
 
         <div className="flex flex-col sm:flex-row gap-4">
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-medium transition"
-          >
+          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-medium transition">
             Save Session
           </button>
           <button
