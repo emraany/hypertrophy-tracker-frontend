@@ -58,8 +58,8 @@ npm run dev
 
 ### Backend Setup
 ```bash
-cd hypertrophy-frontend
+cd hypertrophy-backend
 npm install
-npm run dev
+npm start
 ```
 
