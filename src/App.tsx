@@ -55,10 +55,14 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
-    setSessionToRepeat(null);
-    navigate("/");
-  };
+  localStorage.removeItem("token");
+  sessionStorage.removeItem("token");
+
+  setIsLoggedIn(false);
+  setSessionToRepeat(null);
+  navigate("/");
+};
+
 
   const handleRepeatSession = (session: Session) => {
     setSessionToRepeat(session);
@@ -102,7 +106,17 @@ export default function App() {
                 : <Register onRegistered={() => navigate("/login")} onGoLogin={() => navigate("/login")} />
             }
           />
-          <Route path="/home" element={isLoggedIn ? <Home setView={(v) => navigate(v)} /> : <Navigate to="/login" replace />} />
+          <Route
+            path="/home"
+            element={
+              isLoggedIn ? (
+                <Home setView={(v) => navigate(`/${v}`)} />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
           <Route
             path="/form"
             element={
