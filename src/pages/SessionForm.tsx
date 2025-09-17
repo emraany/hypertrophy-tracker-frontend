@@ -52,10 +52,24 @@ export default function SessionForm({ sessionToRepeat }: Props) {
   const BACKEND = import.meta.env.VITE_REACT_APP_BACKEND_URL;
 
   useEffect(() => {
-    fetch(`${BACKEND}/api/health`)
-      .then(res => res.ok ? setApiStatus("online") : Promise.reject())
-      .catch(() => setApiStatus("offline"));
-  }, [BACKEND]);
+  const key = import.meta.env.VITE_REACT_APP_API_NINJA_KEY;
+  if (!key) {
+    setApiStatus("offline");
+    return;
+  }
+
+  axios.get(
+    "https://api.api-ninjas.com/v1/exercises?muscle=biceps",
+    { headers: { "X-Api-Key": key } }
+  )
+  .then(res => {
+    setApiStatus(res.status >= 200 && res.status < 300 ? "online" : "offline");
+  })
+  .catch(() => {
+    setApiStatus("offline");
+  });
+}, []);
+
 
   useEffect(() => {
     if (!sessionToRepeat) return;
